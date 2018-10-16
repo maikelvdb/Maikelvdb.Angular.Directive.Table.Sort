@@ -1,1 +1,42 @@
-/* You can add global styles to this file, and also import other style files */
+table thead tr th[sort-for] {
+    cursor: pointer;
+}
+table thead tr th:not([sort-order]) {
+    color: #999999;
+    font-weight: bold;
+}
+
+table thead tr th[sort-order] {
+    color: black;
+    font-weight: bold;
+}
+table thead tr th[sort-order]:after {
+    content: '';
+    margin-left: 20px;
+    font-weight: normal;
+    color: red;
+    font-family: "Font Awesome 5 Free"; font-weight: 900; 
+}
+
+table thead tr th[sort-order='asc']:after {
+    content: '\f0de';
+
+}
+table thead tr th[sort-order='desc']:after {
+    content: '\f0d7';
+}
+table thead tr th:last-child {
+    position: relative;
+}
+table thead tr th.col-sort-reset {
+    width: 50px;
+    max-width: 50px;
+}
+table thead tr th.col-sort-reset:after {
+    content: '\f2f1';
+    font-family: "Font Awesome 5 Free"; font-weight: 900; 
+    cursor: pointer;
+}
+table thead tr th.col-sort-reset:hover:after {
+    color: #990000;
+}

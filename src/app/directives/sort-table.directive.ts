@@ -1,46 +1,70 @@
-import { Directive, Input, OnInit, ViewChild, ElementRef, Renderer2 } from '@angular/core';
+import { Directive, Input, OnInit, ElementRef, Renderer2, OnChanges } from '@angular/core';
 
 @Directive({
   selector: '[sort-table]'
 })
-export class SortTableDirective implements OnInit {
-  @Input('sort-table') items;
+export class SortTableDirective {
+  @Input('default-for') defaultFor: string;
+  @Input('sort-table') set setItems(values) {
+    this.items = values;
+    setTimeout(() => this.itemsInit(), 500);
+  }
+  private items: Array<any>;
   private original: Array<any>;
 
   constructor(private elementRef: ElementRef, private renderer: Renderer2) { }
 
-  ngOnInit() {
-    this.original = this.items;
-    var elem = this.elementRef.nativeElement;
+  itemsInit() {    
+    var elem = this.elementRef.nativeElement;    
+    var headings = elem.querySelector('thead').querySelectorAll('[sort-for]');
     
-    var headings = elem.querySelector('thead').querySelectorAll('th');
-    
-    var x = 0;
     for (let head of headings) {
       (function (t) {
         t.renderer.listen(head, 'click', (e) => t.sortTable(e));
       })(this)
+
+      var f = head.getAttribute('sort-for');
+      if (f === this.defaultFor) {
+        head.click();
+      }
+    }
+    
+    this.AddResetCol(elem);
+  }
+  
+  AddResetCol(elem) {
+    var resetCol = document.createElement("th");
+    resetCol.setAttribute('class', 'col-sort-reset');
+    
+    this.renderer.appendChild(elem.querySelector('thead').querySelector('tr'), resetCol);
+    this.renderer.listen(resetCol, 'click', (e) => this.resetSort(e));
+
+    var rows = elem.querySelector('tbody').querySelectorAll('tr');
+    for (let row of rows) {
+      var cols = row.querySelectorAll('td');
+      var lastCol = cols[cols.length-1];
+      this.renderer.setAttribute(lastCol, 'colspan', '2');
     }
   }
   
-  sortTable(e) {
-    var target = e.target;
-    var sortOrder = target.getAttribute('sort-order');
-    var multi = e.shiftKey;
-
-    if (!multi) {
+  resetSort(e) {
       var sortCols = this.elementRef.nativeElement.querySelector('thead').querySelectorAll('[sort-for]');
       for (var col of sortCols) {
         this.renderer.removeAttribute(col, 'sort-order');  
         this.renderer.removeAttribute(col, 'sort-index');
       }
 
-      this.renderer.setAttribute(target, 'sort-index', '0');
-    }
+      this.keySort([]);
+  }
+
+  sortTable(e) {
+    var target = e.target;
+    var sortOrder = target.getAttribute('sort-order');
+    var mustSetIndex = false;
 
     if (sortOrder === 'asc') {
       this.renderer.setAttribute(target, 'sort-order', 'desc');
-
+      mustSetIndex = true;
     }
     else if (sortOrder === 'desc') {
       this.renderer.removeAttribute(target, 'sort-order');  
@@ -48,6 +72,7 @@ export class SortTableDirective implements OnInit {
     }
     else {
       this.renderer.setAttribute(target, 'sort-order', 'asc');
+      mustSetIndex = true;
     }
 
     var elem = this.elementRef.nativeElement;
@@ -56,12 +81,12 @@ export class SortTableDirective implements OnInit {
       cnt.push(parseInt(value.getAttribute('sort-index')));
     });
 
-    if (target.getAttribute('sort-order'))
-    if (cnt.length === 0) {
-      cnt.push(-1);
+    if (mustSetIndex) {
+      if (cnt.length === 0) {
+        cnt.push(-1);
+      }
+      this.renderer.setAttribute(target, 'sort-index', (Math.max(...cnt)+1).toString());        
     }
-    this.renderer.setAttribute(target, 'sort-index', (Math.max(...cnt)+1).toString());        
-    
 
     this.orderList();
   }
@@ -80,30 +105,46 @@ export class SortTableDirective implements OnInit {
     }
     sorts.sort((a, b) => (a.index > b.index) ? 1 : ((b.index > a.index) ? -1 : 0));
 
-    var sortOrder = new Array();
+    var sortOrder = [];
     for (let s of sorts) {
-      sortOrder[s.field] = s.order;
+      sortOrder.push({property: s.field, order: s.order});
     }
     
     this.keySort(sortOrder);
   }
 
   keySort(keys) {
-      debugger;
-    if (!keys) {
-      this.items = this.orderList;
+    if (!keys || keys.length === 0) {
+      // Get default sort order
+      this.keySort([{property: this.defaultFor, order: 'asc'}]);
     }
     else {
-      for (var k in keys) {
-        var order = keys[k];
-        //debugger;
-        if (order === 'asc') {
-          this.items.sort((a, b) => (a[k] > b[k]) ? 1 : ((b[k] > a[k]) ? -1 : 0));
+      this.items.sort((a, b) => {
+        for (let k of keys) {
+          var prop = k.property;
+          var order = k.order;
+          
+          if (order === 'asc') {
+            if (a[prop] > b[prop]) return 1;
+            if(b[prop] > a[prop]) return -1;
+          }
+          else if (order === 'desc') {
+            if (a[prop] < b[prop]) return 1;
+            if(b[prop] < a[prop]) return -1;
+          }
         }
-        else if (order === 'desc') {
-          this.items.sort((a, b) => (a[k] > b[k]) ? -1 : ((b[k] > a[k]) ? 1 : 0));
-        }
-      }
+
+        return 0;
+      });
     }
-  };
+  }
+  
+  clone(obj) {
+    if (null == obj || "object" != typeof obj) return obj;
+    var copy = obj.constructor();
+    for (var attr in obj) {
+        if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
+    }
+    return copy;
+  }
 }
