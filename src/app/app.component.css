@@ -1,0 +1,26 @@
+table thead tr th[sort-for] {
+    cursor: pointer;
+}
+table thead tr th:not([sort-order]) {
+    color: #999999;
+    font-weight: bold;
+}
+
+table thead tr th[sort-order] {
+    color: black;
+    font-weight: bold;
+}
+table thead tr th[sort-order]:after {
+    content: '';
+    margin-left: 20px;
+    font-weight: normal;
+    color: red;
+    font-family: "Font Awesome 5 Free"; font-weight: 900; 
+}
+
+table thead tr th[sort-order='asc']:after {
+    content: '\f0de';
+
+}
+table thead tr th[sort-order='desc']:after {
+    content: '\f0d7';}
